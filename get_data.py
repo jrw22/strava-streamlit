@@ -62,8 +62,7 @@ class ApiConnection:
         response = requests.get(f"https://www.strava.com/api/v3/{endpoint}", headers=headers, params=params)
         return response.json()
     
-    
-    
+
 class AthleteProfile:
     def __init__(self, api_connection):
         self.api_connection = api_connection
@@ -81,3 +80,17 @@ class AthleteProfile:
             activities.extend(response)
             page += 1
         return activities
+    
+    def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
+        """Preprocess the DataFrame to prepare for plotting."""
+
+        # Convert date to datetime object
+        df["date"] = pd.to_datetime(df["date"])
+
+        df.loc[:, "time_of_day"] = (
+            pd.to_datetime(df["time_of_day"], format="%H:%M:%S").dt.hour * 3600
+            + pd.to_datetime(df["time_of_day"], format="%H:%M:%S").dt.minute * 60
+            + pd.to_datetime(df["time_of_day"], format="%H:%M:%S").dt.second
+        )
+
+        return df

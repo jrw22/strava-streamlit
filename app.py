@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 from get_data import ApiConnection, AthleteProfile, CredentialsLoader
 
+from get_plots import StravaPlots
+
 st.title("Strava Dashboard")
 
 creds = CredentialsLoader()
@@ -34,7 +36,7 @@ if authorisation_code:
 
 if st.session_state.get('authorised'):
 
-    # Get athlete profile
+    ### Get athlete profile ###
 
     st.session_state.athlete = AthleteProfile(strava_connector)
     st.session_state.profile = st.session_state.athlete.get_athlete_profile()
@@ -44,24 +46,21 @@ if st.session_state.get('authorised'):
     st.session_state.activities = st.session_state.athlete.fetch_all_activities()
     st.dataframe(st.session_state.activities)
 
-    # Assuming 'activities' is a list of activities fetched from the Strava API
+    ### Create plots ###
     df = pd.DataFrame(st.session_state.activities)
+    st.session_state.plots = StravaPlots(df)
 
-    # Convert the date to datetime and extract month and year
-    df['start_date'] = pd.to_datetime(df['start_date'])
-    df['month_year'] = df['start_date'].dt.to_period('M')
-    df['elapsed_time'] = ((df['elapsed_time']/60)/60) # convert seconds to hours
 
-    # Aggregate training time by month
-    monthly_training = df.groupby('month_year')['elapsed_time'].sum() 
+    # Monthly training time
+    monthly_training_time = st.session_state.plots.monthly_training_time()
+    st.pyplot(monthly_training_time)
 
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    monthly_training.plot(kind='bar')
-    plt.title('Monthly Time Spent Training')
-    plt.xlabel('Month')
-    plt.ylabel('Training Time (hours)')
-    st.pyplot(plt)
+    # Monthly training time grouped
+    fig, ax = st.session_state.plots.monthly_training_time_grouped()
+    st.pyplot(fig)
+
+    
+
 
 
 
