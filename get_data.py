@@ -1,7 +1,15 @@
 import requests
 from urllib.parse import urlencode, urlparse, parse_qs
 import streamlit as st
+import json
+import pandas as pd
 
+class CredentialsLoader:
+
+    def load_credentials(self, file):
+        with open(file, 'r') as file:
+            return json.load(file)
+        
 class ApiConnection:
     def __init__(self, client_id, client_secret, redirect_uri):
         self.client_id = client_id
@@ -54,5 +62,22 @@ class ApiConnection:
         response = requests.get(f"https://www.strava.com/api/v3/{endpoint}", headers=headers, params=params)
         return response.json()
     
+    
+    
+class AthleteProfile:
+    def __init__(self, api_connection):
+        self.api_connection = api_connection
+
     def get_athlete_profile(self):
-        return self.make_api_call("athlete")
+        return self.api_connection.make_api_call("athlete")
+    
+    def fetch_all_activities(self):
+        activities = []
+        page = 1
+        while True:
+            response = self.api_connection.make_api_call('athlete/activities', params={'per_page': 200, 'page': page})
+            if not response:
+                break  # No more activities to fetch
+            activities.extend(response)
+            page += 1
+        return activities

@@ -1,18 +1,14 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import json
+import matplotlib.pyplot as plt
 
-from get_data import ApiConnection
+from get_data import ApiConnection, AthleteProfile, CredentialsLoader
 
 st.title("Strava Dashboard")
 
-# Read credentials from JSON file
-def load_credentials():
-    with open('credentials.json', 'r') as file:
-        return json.load(file)
-
-credentials = load_credentials()
+creds = CredentialsLoader()
+credentials = creds.load_credentials(file='credentials.json')
 client_id = credentials['client_id']
 client_secret = credentials['client_secret']
 redirect_uri = credentials['redirect_uri']
@@ -36,11 +32,37 @@ if authorisation_code:
     strava_connector.exchange_code_for_token(authorisation_code)
     st.session_state['authorised'] = True
 
-# Get athlete profile
 if st.session_state.get('authorised'):
-    profile = strava_connector.get_athlete_profile()
+
+    # Get athlete profile
+
+    st.session_state.athlete = AthleteProfile(strava_connector)
+    st.session_state.profile = st.session_state.athlete.get_athlete_profile()
     st.write("Connection successful")
-    st.write(profile)  # Display some details from the profile
+    st.write(st.session_state.profile)  # Display some details from the profile
+
+    st.session_state.activities = st.session_state.athlete.fetch_all_activities()
+    st.dataframe(st.session_state.activities)
+
+    # Assuming 'activities' is a list of activities fetched from the Strava API
+    df = pd.DataFrame(st.session_state.activities)
+
+    # Convert the date to datetime and extract month and year
+    df['start_date'] = pd.to_datetime(df['start_date'])
+    df['month_year'] = df['start_date'].dt.to_period('M')
+    df['elapsed_time'] = ((df['elapsed_time']/60)/60) # convert seconds to hours
+
+    # Aggregate training time by month
+    monthly_training = df.groupby('month_year')['elapsed_time'].sum() 
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    monthly_training.plot(kind='bar')
+    plt.title('Monthly Time Spent Training')
+    plt.xlabel('Month')
+    plt.ylabel('Training Time (hours)')
+    st.pyplot(plt)
+
 
 
 
